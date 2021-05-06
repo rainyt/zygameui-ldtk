@@ -18,3 +18,22 @@ class Main extends Start {
     }
 }
 ```
+
+## 简单的使用例子：
+```haxe
+var ldtkid = "WorldMap_GridVania_layout";
+// 加载LDTK地图
+assets.loadFile("assets/samples/" + ldtkid + ".ldtk");
+assets.start(function(f) {
+    if (f == 1) {
+        // 获取LDTK项目数据
+        var project = assets.getLDTKProject(ldtkid);
+        // 开始创建地图
+        var map = project.createLDTKMap("Hidden_cave");
+        // 添加地图
+        this.addChild(map);
+        map.scale(1.5);
+
+    }
+});
+```
