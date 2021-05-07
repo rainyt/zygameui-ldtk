@@ -48,9 +48,18 @@ class LDTKProject {
 	 */
 	public var assets:ZAssets;
 
+	/**
+	 * 瓦片路径绑定UID
+	 */
+	public var tilesetPathByUid:Map<Int, String>;
+
 	public function new(data:String) {
 		var ldtkData = Json.parse(data);
 		zygame.macro.JsonSet.setData(this, ldtkData);
+		tilesetPathByUid = [];
+		for (index => value in this.defs.tilesets) {
+			tilesetPathByUid.set(value.uid, StringUtils.getName(value.relPath));
+		}
 	}
 
 	/**
@@ -68,6 +77,16 @@ class LDTKProject {
 			// var fixFloat = value.__gridSize * 0.002;
 			var fixFloat = 0;
 			switch (value.__type) {
+				case "Entities":
+					// 事件渲染
+					var layer = new ZBox();
+					box.addChild(layer);
+					for (index => value in value.entityInstances) {
+						var entity = new LDTKEntity(this, value);
+						layer.addChild(entity);
+						entity.x = value.px[0];
+						entity.y = value.px[1];
+					}
 				case "IntGrid", "AutoLayer":
 					var tilesetId = StringUtils.getName(value.__tilesetRelPath);
 					var batch = new ImageBatchs(assets.getTextureAtlas(tilesetId), -1, -1, false);
@@ -139,9 +158,33 @@ typedef LDTKLevel = {
 			f:Int,
 			t:Int,
 			d:Array<Int>
-		}>
+		}>,
+		entityInstances:Array<LDTKEventEntity>
 	}>
 };
+
+/**
+ * LDTK的事件实例
+ */
+typedef LDTKEventEntity = {
+	__identifier:String,
+	__grid:Array<Int>,
+	__pivot:Array<Float>,
+	__tile:{
+		tilesetUid:Int, srcRect:Array<Int>
+	},
+	width:Int,
+	height:Int,
+	defUid:Int,
+	px:Array<Int>,
+	fieldInstances:Array<{
+		__identifier:String,
+		__value:String,
+		__type:String,
+		defUid:Int,
+		realEditorValues:Array<Dynamic>
+	}>
+}
 
 /**
  * LDTK的定义描述
@@ -155,7 +198,8 @@ typedef LDTKDefs = {
 		pxHei:Int,
 		tileGridSize:Int,
 		spacing:Int,
-		padding:Int
+		padding:Int,
+		uid:Int
 	}>,
 	enums:Array<Dynamic>,
 	externalEnums:Array<Dynamic>,
