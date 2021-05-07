@@ -80,6 +80,7 @@ class LDTKProject {
 				case "Entities":
 					// 事件渲染
 					var layer = new ZBox();
+					layer.name = value.__identifier;
 					box.addChild(layer);
 					for (index => value in value.entityInstances) {
 						var entity = new LDTKEntity(this, value);
@@ -90,6 +91,7 @@ class LDTKProject {
 				case "IntGrid", "AutoLayer":
 					var tilesetId = StringUtils.getName(value.__tilesetRelPath);
 					var batch = new ImageBatchs(assets.getTextureAtlas(tilesetId), -1, -1, false);
+					batch.name = value.__identifier;
 					batch.width = level.pxWid;
 					batch.height = level.pxHei;
 					for (tile in value.autoLayerTiles) {
