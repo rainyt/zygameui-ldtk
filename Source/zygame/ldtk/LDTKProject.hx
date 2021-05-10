@@ -68,7 +68,7 @@ class LDTKProject {
 	 */
 	public function createLDTKMap(levelid:String):LDTKMap {
 		var level = getLDTKLevel(levelid);
-		var box = new LDTKMap();
+		var box = new LDTKMap(level.pxWid, level.pxHei, level.layerInstances[0].__gridSize);
 		// 开始渲染
 		var len = level.layerInstances.length;
 		while (len > 0) {
@@ -117,6 +117,8 @@ class LDTKProject {
 					}
 					box.addChild(batch);
 					batch.alpha = value.__opacity;
+					if (value.__type == "IntGrid")
+						box.bindIntGridCsv(value.intGridCsv);
 			}
 		}
 		return box;
@@ -137,7 +139,95 @@ class LDTKProject {
 	}
 }
 
-class LDTKMap extends ZBox {}
+class LDTKMap extends ZBox {
+	public var tileWidth:Int = 0;
+
+	public var tileHeight:Int = 0;
+
+	public var tileSize:Int = 0;
+
+	private var _mapInt:Array<Array<Int>> = [];
+
+	public function new(tileW:Int, tileH:Int, tileSize:Int) {
+		super();
+		this.tileSize = tileSize;
+		this.tileWidth = Std.int(tileW / this.tileSize);
+		this.tileHeight = Std.int(tileH / this.tileSize);
+	}
+
+	/**
+	 * 绑定地图块数据
+	 */
+	public function bindIntGridCsv(data:Array<Int>):Void {
+		var ix = 0;
+		var iy = 0;
+		trace(this.tileWidth, data.length);
+		for (i in 0...data.length) {
+			if (_mapInt[ix] == null)
+				_mapInt[ix] = [];
+			_mapInt[ix][iy] = data[i];
+			ix++;
+			if (ix >= this.tileWidth) {
+				ix = 0;
+				iy++;
+			}
+		}
+	}
+
+	/**
+	 * 碰撞逻辑
+	 * @param rect 
+	 */
+	public function hitGrid(rect:{
+		x:Float,
+		y:Float,
+		w:Float,
+		h:Float
+	}):LDTKHitData {
+		var XIndex = Std.int(rect.x / tileSize);
+		var YIndex = Std.int(rect.y / tileSize);
+		var centerYIndex = Std.int((rect.y - 1 / 2) / tileSize);
+		var topIndex = Std.int((rect.y - rect.h) / tileSize);
+		var centerIndex = Std.int((rect.y - rect.h / 2) / tileSize);
+		var leftIndex = Std.int((rect.x - rect.w / 2) / tileSize);
+		var rightIndex = Std.int((rect.x + rect.w / 2) / tileSize);
+		var right = _mapInt[rightIndex][centerYIndex];
+		var left = _mapInt[leftIndex][centerYIndex];
+		var bottom = _mapInt[XIndex][YIndex];
+		var leftIndex2 = Std.int((rect.x - (rect.w - 2) / 2) / tileSize);
+		var rightIndex2 = Std.int((rect.x + (rect.w - 2) / 2) / tileSize);
+		if (bottom == 0)
+			bottom = _mapInt[leftIndex2][YIndex];
+		if (bottom == 0)
+			bottom = _mapInt[rightIndex2][YIndex];
+		var top = _mapInt[XIndex][topIndex];
+		// if (top == 0)
+		// 	top = _mapInt[leftIndex][topIndex];
+		// if (top == 0)
+		// top = _mapInt[rightIndex][topIndex];
+		return {
+			top: top,
+			center: _mapInt[XIndex][centerIndex],
+			right: right == 0 ? _mapInt[rightIndex][topIndex] : right,
+			left: left == 0 ? _mapInt[leftIndex][topIndex] : left,
+			bottom: bottom,
+			centerYIndex: YIndex,
+			centerXIndex: XIndex,
+			topIndex: topIndex
+		};
+	}
+}
+
+typedef LDTKHitData = {
+	left:Int,
+	right:Int,
+	top:Int,
+	bottom:Int,
+	centerXIndex:Int,
+	centerYIndex:Int,
+	topIndex:Int,
+	center:Int
+}
 
 /**
  * 关卡数据
@@ -161,6 +251,7 @@ typedef LDTKLevel = {
 			t:Int,
 			d:Array<Int>
 		}>,
+		intGridCsv:Array<Int>,
 		entityInstances:Array<LDTKEventEntity>
 	}>
 };
