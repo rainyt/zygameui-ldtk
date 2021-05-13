@@ -1,5 +1,7 @@
 package zygame.ldtk;
 
+import openfl.geom.Rectangle;
+import zygame.utils.Lib;
 import zygame.display.batch.BImage;
 import zygame.utils.ZAssets;
 import zygame.display.batch.ImageBatchs;
@@ -63,12 +65,30 @@ class LDTKProject {
 	}
 
 	/**
+	 * 创建当前项目里的世界内容
+	 * @return LDTKWorld
+	 */
+	public function createLDTKWorld():LDTKWorld {
+		var world = new LDTKWorld();
+		world.tileSize = defaultGridSize;
+		for (level in levels) {
+			var map = createLDTKMap(level.identifier);
+			world.addMap(map);
+		}
+		return world;
+	}
+
+	/**
 	 * 创建LDTK地图
 	 * @param levelid 
 	 */
 	public function createLDTKMap(levelid:String):LDTKMap {
 		var level = getLDTKLevel(levelid);
 		var box = new LDTKMap(level.pxWid, level.pxHei, level.layerInstances[0].__gridSize);
+		box.x = level.worldX;
+		box.y = level.worldY;
+		box.offestWorldX = Std.int(level.worldX / level.layerInstances[0].__gridSize);
+		box.offestWorldY = Std.int(level.worldY / level.layerInstances[0].__gridSize);
 		// 开始渲染
 		var len = level.layerInstances.length;
 		while (len > 0) {
@@ -140,13 +160,17 @@ class LDTKProject {
 }
 
 class LDTKMap extends ZBox {
+	public var offestWorldX:Int = 0;
+
+	public var offestWorldY:Int = 0;
+
 	public var tileWidth:Int = 0;
 
 	public var tileHeight:Int = 0;
 
 	public var tileSize:Int = 0;
 
-	private var _mapInt:Array<Array<Int>> = [];
+	private var _mapInt:Array<Array<LDTKHitData>> = [];
 
 	public function new(tileW:Int, tileH:Int, tileSize:Int) {
 		super();
@@ -165,7 +189,7 @@ class LDTKMap extends ZBox {
 		for (i in 0...data.length) {
 			if (_mapInt[ix] == null)
 				_mapInt[ix] = [];
-			_mapInt[ix][iy] = data[i];
+			_mapInt[ix][iy] = {gid: data[i]};
 			ix++;
 			if (ix >= this.tileWidth) {
 				ix = 0;
@@ -174,59 +198,56 @@ class LDTKMap extends ZBox {
 		}
 	}
 
+	private function __hitGrid(x:Int, y:Int, array:Array<Int>):Void {
+		if (x < 0 || y < 0 || x >= _mapInt.length)
+			return;
+		var value = _mapInt[x][y];
+		if (value != null && value.gid != 0) {
+			var data:LDTKHitData = value;
+			if (array.indexOf(data.gid) == -1)
+				array.push(data.gid);
+		}
+	}
+
 	/**
 	 * 碰撞逻辑
-	 * @param rect 
+	 * @param rect
 	 */
-	public function hitGrid(rect:{
-		x:Float,
-		y:Float,
-		w:Float,
-		h:Float
-	}):LDTKHitData {
-		var XIndex = Std.int(rect.x / tileSize);
-		var YIndex = Std.int(rect.y / tileSize);
-		var centerYIndex = Std.int((rect.y - 1 / 2) / tileSize);
-		var topIndex = Std.int((rect.y - rect.h) / tileSize);
-		var centerIndex = Std.int((rect.y - rect.h / 2) / tileSize);
-		var leftIndex = Std.int((rect.x - rect.w / 2) / tileSize);
-		var rightIndex = Std.int((rect.x + rect.w / 2) / tileSize);
-		var right = _mapInt[rightIndex][centerYIndex];
-		var left = _mapInt[leftIndex][centerYIndex];
-		var bottom = _mapInt[XIndex][YIndex];
-		var leftIndex2 = Std.int((rect.x - (rect.w - 2) / 2) / tileSize);
-		var rightIndex2 = Std.int((rect.x + (rect.w - 2) / 2) / tileSize);
-		if (bottom == 0)
-			bottom = _mapInt[leftIndex2][YIndex];
-		if (bottom == 0)
-			bottom = _mapInt[rightIndex2][YIndex];
-		var top = _mapInt[XIndex][topIndex];
-		// if (top == 0)
-		// 	top = _mapInt[leftIndex][topIndex];
-		// if (top == 0)
-		// top = _mapInt[rightIndex][topIndex];
-		return {
-			top: top,
-			center: _mapInt[XIndex][centerIndex],
-			right: right == 0 ? _mapInt[rightIndex][topIndex] : right,
-			left: left == 0 ? _mapInt[leftIndex][topIndex] : left,
-			bottom: bottom,
-			centerYIndex: YIndex,
-			centerXIndex: XIndex,
-			topIndex: topIndex
-		};
+	public function hitGrid(rect:Dynamic):Array<Int> {
+		var array:Array<Int> = [];
+		var left = (rect.x - (rect.w - 2) * 0.5);
+		var top = (rect.y - (rect.h - 2));
+		var right = (rect.x + (rect.w - 2) * 0.5);
+		var bottom = (rect.y);
+		var xIndex = Std.int(left / tileSize);
+		var yIndex = Std.int(top / tileSize);
+		var xIndex2 = Std.int(right / tileSize);
+		var yIndex2 = Std.int(bottom / tileSize);
+		__hitGrid(xIndex, yIndex, array);
+		__hitGrid(xIndex2, yIndex, array);
+		__hitGrid(xIndex2, yIndex2, array);
+		__hitGrid(xIndex, yIndex2, array);
+		return array;
+	}
+
+	public function getGrid(cx:Int, cy:Int):Int {
+		if (_mapInt[cx] == null)
+			return 0;
+		if (_mapInt[cx][cy] == null)
+			return 0;
+		return _mapInt[cx][cy].gid;
 	}
 }
 
+typedef Rect = {
+	x:Float,
+	y:Float,
+	w:Float,
+	h:Float
+}
+
 typedef LDTKHitData = {
-	left:Int,
-	right:Int,
-	top:Int,
-	bottom:Int,
-	centerXIndex:Int,
-	centerYIndex:Int,
-	topIndex:Int,
-	center:Int
+	gid:Int
 }
 
 /**
