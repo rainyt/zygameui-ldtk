@@ -1,3 +1,5 @@
 --library zygameui
 --library openfl
 --class-path Source
+--library ase
+--library openfl-aseprite

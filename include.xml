@@ -5,4 +5,6 @@
 	<source path="Source" />
 	<!-- LDTK定义 -->
 	<haxedef name="ldtk" />
+	<!--  -->
+	<haxelib name="openfl-aseprite"/>
 </project>

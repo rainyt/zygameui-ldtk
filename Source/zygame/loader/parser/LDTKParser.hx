@@ -9,6 +9,7 @@ import zygame.utils.AssetsUtils;
 /**
  * 用于加载LDTKParser解析使用，当加载一个ldtk文件时，则会将所有的瓦片加载。
  */
+@:keep
 class LDTKParser extends ParserBase {
 	private var ldtk:LDTKProject;
 
@@ -36,7 +37,7 @@ class LDTKParser extends ParserBase {
 			});
 		} else if (tilesetLoadIndex < ldtk.defs.tilesets.length) {
 			var tileset = ldtk.defs.tilesets[tilesetLoadIndex];
-			if (tileset != null) {
+			if (tileset != null && tileset.relPath != null) {
 				AssetsUtils.loadBitmapData(_rootPath + "/" + tileset.relPath).onComplete(function(data) {
 					tilesetLoadIndex++;
 					// 解析瓦片数据
